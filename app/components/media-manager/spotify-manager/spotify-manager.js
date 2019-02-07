@@ -6,6 +6,8 @@ import { elements } from '../../../element-creator.js'
 export default class SpotifyManager extends HTMLElement {
   constructor() {
     super()
+
+    this.el
   }
 
   static get observedAttributes() {
@@ -14,90 +16,97 @@ export default class SpotifyManager extends HTMLElement {
     ]
   }
 
+  static get state() {
+    const state = {}
+    this.observedAttributes.forEach(attr => {
+      state[attr] = this[attr]
+    })
+    return state
+  }
+
   async connectedCallback() {
     await component.create(this, './components/media-manager/spotify-manager/spotify-manager.html')
 
-
-    this.initEvents()
-    SpotifyManager.observedAttributes.forEach(x => this.render(x, null, this[x]))
+    this.el = this.render()
+    this.shadowRoot.appendChild(this.el)
   }
 
   attributeChangedCallback(attrName, oldVal, newVal) {
     this[attrName] = newVal
-    this.render(attrName, oldVal, newVal)
-  }
+    if(!this.shadowRoot) return
 
-  async initEvents() {
-    this.shadowRoot.querySelector('.state-toggle').onclick = () => {
-      if(this.state === 'playing') {
-        hassService.media.pause(this.entity_id)
-      } else if (this.state === 'paused'){
-        hassService.media.play(this.entity_id)
-      }
-    }
+    const dd = new diffDOM.DiffDOM()
+    const diff = dd.diff(this.el, this.render())
 
-    this.shadowRoot.querySelector('#volume').onchange = async (e) => {
-      const element = e.currentTarget
-
-      await hassService.media.setVolume(
-        this.entity_id,
-        element.value
-      )
+    if (diff.length > 0) {
+      dd.apply(this.el, diff)
     }
   }
 
+  render() {
+    const { div, span, img, input, style } = elements
 
-  render(attrName, oldVal, newVal) {
-    const { div, span } = elements
-
-    document.body.appendChild(
-      div(
-        {
-          id: '1',
-          className: 'pie',
-          innerText: 'this is a div',
+    return (
+      div({},
+        style({
+          innerHTML: '@import "./components/media-manager/spotify-manager/spotify-manager.css";',
+        }
+        ),
+        span({
+          id: 'state',
+        }),
+        div({
+          className: 'song-info',
         },
-        span(
-          {
-            className: 'header'
-          },
-        )
+          img({
+            id: 'artwork',
+            src: `https://biddy.duckdns.org${this.artwork}`,
+          }),
+          div({
+            id: 'artist',
+            innerHTML: this.artist,
+          }),
+          div({
+            id: 'album',
+            innerHTML: this.album,
+          }),
+          div({
+            id: 'song',
+            innerHTML: this.song,
+          }),
+        ),
+        div({
+          className: 'controls',
+        },
+          div({
+            className: `state-toggle${this.state === 'playing' ? ' playing' : ''}`,
+            onclick: () => {
+              if(this.state === 'playing') {
+                hassService.media.pause(this.entity_id)
+              } else if (this.state === 'paused' || this.state === 'idle'){
+                hassService.media.play(this.entity_id)
+              }
+            },
+          }),
+          input({
+            id: 'volume',
+            type: 'range',
+            min: '0',
+            max: '1',
+            step: '0.01',
+            value: this.volume,
+            onchange: async(e) => {
+              const element = e.currentTarget
+
+              await hassService.media.setVolume(
+                this.entity_id,
+                element.value
+              )
+            },
+          })
+        ),
       )
     )
-
-    if (this.shadowRoot) {
-      let el
-      switch(attrName) {
-        case 'volume':
-          el = this.shadowRoot.querySelector(`#${attrName}`)
-          el.value = newVal
-          break
-        case 'artist':
-        case 'album':
-        case 'song':
-          el = this.shadowRoot.querySelector(`#${attrName}`)
-          el.innerHTML = newVal
-          break
-        case 'artwork':
-          el = this.shadowRoot.querySelector(`#${attrName}`)
-          el.src = `https://biddy.duckdns.org${newVal}`
-          break
-        case 'state':
-          if (newVal === 'playing')
-            this.shadowRoot.querySelector('.state-toggle').classList.add('playing')
-          else if (newVal === 'paused')
-            this.shadowRoot.querySelector('.state-toggle').classList.remove('playing')
-          /*
-          this.shadowRoot.querySelector('.fa-play')
-            .hidden = newVal === 'playing'
-          this.shadowRoot.querySelector('.fa-pause')
-            .hidden = newVal === 'paused'
-            */
-          break
-        default:
-          break
-      }
-    }
   }
 }
 
