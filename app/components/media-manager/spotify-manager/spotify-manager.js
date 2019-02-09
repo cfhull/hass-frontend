@@ -1,114 +1,97 @@
-import { hassService } from '../../../services/hass.service.js' 
-import component from '../../../services/component.service.js'
-
+import { subscribe, publish, getState, SET_VOLUME, SET_MEDIA_STATE } from '../../../services/hass.service.js' 
 import { elements } from '../../../element-creator.js'
+import { DiffDOM } from 'diff-dom'
+import styles from './spotify-manager.module.css'
+import classNames from 'classnames/bind'
 
-export default class SpotifyManager extends HTMLElement {
-  constructor() {
-    super()
+const cx = classNames.bind(styles)
 
-    this.el
-  }
+export const SpotifyManager = () => {
+  let dom = render({})
 
-  static get observedAttributes() {
-    return [
-      'entity_id', 'state', 'volume', 'artist', 'album', 'song', 'artwork',
-    ]
-  }
+  subscribe(entities => {
+    const data = entities['media_player.spotify'].attributes
+    data.state = entities['media_player.spotify'].state
 
-  static get state() {
-    const state = {}
-    this.observedAttributes.forEach(attr => {
-      state[attr] = this[attr]
-    })
-    return state
-  }
-
-  async connectedCallback() {
-    await component.create(this, './components/media-manager/spotify-manager/spotify-manager.html')
-
-    this.el = this.render()
-    this.shadowRoot.appendChild(this.el)
-  }
-
-  attributeChangedCallback(attrName, oldVal, newVal) {
-    this[attrName] = newVal
-    if(!this.shadowRoot) return
-
-    const dd = new diffDOM.DiffDOM()
-    const diff = dd.diff(this.el, this.render())
+    const dd = new DiffDOM()
+    const diff = dd.diff(dom, render(data))
 
     if (diff.length > 0) {
-      dd.apply(this.el, diff)
+      dd.apply(dom, diff)
     }
-  }
+  })
 
-  render() {
-    const { div, span, img, input, style } = elements
 
+  function render({
+    entity_id,
+    entity_picture,
+    media_artist,
+    media_album_name,
+    media_title,
+    volume_level,
+    state,
+  }) { 
+    const { div, span, img, input } = elements
     return (
       div({},
-        style({
-          innerHTML: '@import "./components/media-manager/spotify-manager/spotify-manager.css";',
-        }
-        ),
         span({
-          id: 'state',
+          className: styles.state,
         }),
         div({
-          className: 'song-info',
+          className: styles.songInfo,
         },
           img({
-            id: 'artwork',
-            src: `https://biddy.duckdns.org${this.artwork}`,
+            className: styles.artwork,
+            src: `https://biddy.duckdns.org${entity_picture}`,
           }),
           div({
-            id: 'artist',
-            innerHTML: this.artist,
+            className: styles.artist,
+            innerHTML: media_artist,
           }),
           div({
-            id: 'album',
-            innerHTML: this.album,
+            id: styles.album,
+            innerHTML: media_album_name,
           }),
           div({
-            id: 'song',
-            innerHTML: this.song,
+            className: styles.song,
+            innerHTML: media_title,
           }),
         ),
         div({
-          className: 'controls',
+          className: styles.controls,
         },
           div({
-            className: `state-toggle${this.state === 'playing' ? ' playing' : ''}`,
-            onclick: () => {
-              if(this.state === 'playing') {
-                hassService.media.pause(this.entity_id)
-              } else if (this.state === 'paused' || this.state === 'idle'){
-                hassService.media.play(this.entity_id)
-              }
+            className: cx(styles.stateToggle, { playing: state === 'playing'}),
+            onclick: async () => {
+              const state = await getState('media_player.spotify')
+              publish(
+                SET_MEDIA_STATE,
+                {
+                  service: state.state === 'playing' ? 'media_pause' : 'media_play',
+                }
+              )
             },
           }),
           input({
-            id: 'volume',
+            className: styles.volume,
             type: 'range',
             min: '0',
             max: '1',
             step: '0.01',
-            value: this.volume,
+            value: volume_level,
             onchange: async(e) => {
               const element = e.currentTarget
 
-              await hassService.media.setVolume(
-                this.entity_id,
-                element.value
-              )
+              await publish(SET_VOLUME, {
+                value: element.value,
+              })
             },
           })
-        ),
+        )
       )
     )
   }
-}
 
-customElements.define('spotify-manager', SpotifyManager)
+  return dom
+}
 

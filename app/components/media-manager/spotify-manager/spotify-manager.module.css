@@ -5,15 +5,15 @@
   min-width: 350px;
 }
 
-#artwork {
+.artwork {
   width: 100%;
 }
 
-.song-info {
+.songInfo {
   margin-bottom: 5px;
 }
 
-.song-info div {
+.songInfo div {
   margin: 5px 0;
 }
 
@@ -22,11 +22,11 @@
   align-items: center;
 }
 
-.controls #volume {
+.controls .volume {
   margin-left: 10px;
 }
 
-.state-toggle {
+.stateToggle {
   border: 0;
   background: transparent;
   box-sizing: border-box;
@@ -42,12 +42,12 @@
   filter: drop-shadow(0px 0px 4px var(--color-control));
 }
 
-.state-toggle.playing {
+.stateToggle.playing {
   border-style: double;
   border-width: 0px 0 0px 40px;
 }
 
-.state-toggle:hover {
+.stateToggle:hover {
   border-color: transparent transparent transparent var(--color-control-hover);
   filter: drop-shadow(--shadow-control-hover);
 }
