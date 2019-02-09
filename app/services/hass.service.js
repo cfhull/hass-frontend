@@ -41,7 +41,7 @@ export const publish = async (actionType, data) => (
       'media_player',
       actionType,
       {
-        entity_id: 'media_player.spotify',
+        entity_id: data.entity_id,
         volume_level: data.value,
       }
     )
@@ -52,14 +52,14 @@ export const publish = async (actionType, data) => (
       'media_player',
       data.service,
       {
-        entity_id: 'media_player.spotify',
+        entity_id: data.entity_id,
       }
     )
   ))
   .otherwise(x => { throw 'invalid service call: ' + x })
 )
 
-export const getState = (entityId) =>
+export const getState = entityId =>
   getStates(connection).then(states =>
     states.find(state => state.entity_id === entityId)
   )

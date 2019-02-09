@@ -1,58 +1,41 @@
-import { hassService } from '../../../services/hass.service.js' 
-import component from '../../../services/component.service.js'
+import { publish, SET_VOLUME } from '../../../services/hass.service.js' 
+import { elements } from '../../../element-creator.js'
+import styles from './snapcast-client.module.css'
 
-export default class SnapcastClient extends HTMLElement {
-  constructor() {
-    super()
-  }
+export const SnapcastClient = ({
+  entity_id,
+  attributes: {
+    volume_level,
+    friendly_name,
+  } = {},
+}) => {
+  const { div, input } = elements
+  return (
+    div({},
+      div({
+        className: styles.name,
+        innerHTML: friendly_name,
+      }) ,
+      div({
+        className: styles.controls,
+      },
+        input({
+          className: styles.volume,
+          type: 'range',
+          min: 0,
+          max: 1,
+          step: 0.01,
+          value: volume_level,
+          onchange: async(e) => {
+            const element = e.currentTarget
 
-  static get observedAttributes() {
-    return [
-      'entity_id', 'name', 'volume', 'isVolumeMuted', 'state'
-    ]
-  }
-
-  async connectedCallback() {
-    const shadowRoot = await component.create(this, './components/media-manager/snapcast-client/snapcast-client.html')
-
-    this.initEvents()
-    SnapcastClient.observedAttributes.forEach(x => this.render(x, null, this[x]))
-  }
-
-  attributeChangedCallback(attrName, oldVal, newVal) {
-    this[attrName] = newVal
-    this.render(attrName, oldVal, newVal)
-  }
-
-  async initEvents() {
-    this.shadowRoot.querySelector('#volume').onchange = async (e) => {
-      const element = e.currentTarget
-
-      await hassService.media.setVolume(
-        this.entity_id,
-        element.value
-      )
-    }
-  }
-
-  render(attrName, oldVal, newVal) {
-    if (this.shadowRoot) {
-      const el = this.shadowRoot.querySelector(`#${attrName}`)
-      if (el) {
-        switch(attrName) {
-          case 'volume':
-            el.value = newVal
-            break;
-          case 'name':
-            el.innerHTML = newVal
-            break
-          default:
-            break
-        }
-      }
-    }
-  }
+            await publish(SET_VOLUME, {
+              entity_id,
+              value: element.value,
+            })
+          },
+        })
+      ) ,
+    )
+  )
 }
-
-customElements.define('snapcast-client', SnapcastClient)
-
