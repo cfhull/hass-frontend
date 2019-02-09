@@ -21,12 +21,12 @@ html {
 
   color: var(--color-text);
   font-family: 'Lato', sans-serif;
-
 }
 
 html {
   box-sizing: border-box;
 }
+
 *, *:before, *:after {
   box-sizing: inherit;
 }

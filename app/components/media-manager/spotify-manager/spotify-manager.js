@@ -45,15 +45,12 @@ export const SpotifyManager = () => {
             src: `https://biddy.duckdns.org${entity_picture}`,
           }),
           div({
-            className: styles.artist,
             innerHTML: media_artist,
           }),
           div({
-            id: styles.album,
             innerHTML: media_album_name,
           }),
           div({
-            className: styles.song,
             innerHTML: media_title,
           }),
         ),
