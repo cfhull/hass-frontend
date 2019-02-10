@@ -1,8 +1,8 @@
 import { SpotifyManager } from './spotify-manager/spotify-manager.js'
 import { SnapcastClient } from './snapcast-client/snapcast-client.js'
-import { subscribe, publish, SET_VOLUME } from '../../services/hass.service.js' 
-import { elements } from '../../element-creator.js'
-import { DiffDOM } from 'diff-dom'
+import { subscribe, publish, SET_VOLUME, SET_MEDIA_STATE, getState } from '../../services/hass.service.js' 
+import elements from '@cfhull/dom-it'
+import updateElement from '@cfhull/diff-dom-props'
 import styles from './media-manager.module.css'
 
 const MediaManager = () => {
@@ -11,8 +11,22 @@ const MediaManager = () => {
   let dom = render()
 
   subscribe(entities => {
-    spotifyData = entities['media_player.spotify'].attributes
-    spotifyData.state = entities['media_player.spotify'].state
+    spotifyData = entities['media_player.spotify']
+    spotifyData.onVolumeChange = async e => {
+      publish(SET_VOLUME, {
+        value: e.currentTarget.value,
+        entity_id: 'media_player.spotify',
+      })
+    }
+    spotifyData.onStateChange = async e => {
+      const state = await getState('media_player.spotify')
+      publish(
+        SET_MEDIA_STATE,
+        {
+          service: state.state === 'playing' ? 'media_pause' : 'media_play',
+        }
+      )
+    }
 
     snapcastData = Object.keys(entities)
       .filter(key => key.startsWith('media_player.snapcast_client_'))
@@ -22,13 +36,9 @@ const MediaManager = () => {
       }, [])
       .filter(entity => entity.state !== 'off')
 
-    const dd = new DiffDOM()
-    const diff = dd.diff(dom, render())
-
-    if (diff.length > 0) {
-      dd.apply(dom, diff)
-    }
+    updateElement(dom.parentElement, render(), dom)
   })
+
 
   function render() {
     const { div } = elements 
@@ -36,7 +46,7 @@ const MediaManager = () => {
       div({
         className: styles.container,
       },
-        SpotifyManager(),
+        SpotifyManager(spotifyData),
         ...snapcastData.map(data => SnapcastClient(data))
       )
     )
@@ -46,4 +56,3 @@ const MediaManager = () => {
 }
 
 export default MediaManager
-
